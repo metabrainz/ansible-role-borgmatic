@@ -1,0 +1,36 @@
+---
+- name: Prepare
+  hosts: all
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: true
+        cache_valid_time: 600
+
+    - name: Install dependencies
+      apt:
+        name: openssh-client
+        state: present
+
+    - name: Install borg
+      include_role:
+        name: metabrainz.borg
+
+    - name: Create backup directory
+      file:
+        path: /srv/backups
+        state: directory
+        mode: "0750"
+
+- name: Prepare server
+  hosts: server
+  tasks:
+    - name: Install SSH server
+      apt:
+        name: openssh-server
+        state: present
+
+    - name: Start SSH server
+      service:
+        name: ssh
+        state: started

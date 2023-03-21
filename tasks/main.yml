@@ -1,0 +1,124 @@
+---
+- name: Install required packages
+  apt:
+    name: "{{ borgmatic_packages }}"
+    state: present
+
+- name: Install borgmatic in a Python virtual environment
+  pip:
+    name: borgmatic
+    version: "{{ borgmatic_version }}"
+    state: present
+    virtualenv: "{{ borgmatic_directory }}"
+    virtualenv_command: "{{ borgmatic_python_command }} -m venv"
+
+- name: Create symlink to current Python virtual environment
+  file:
+    src: "{{ borgmatic_directory }}"
+    path: "{{ borgmatic_current_directory }}"
+    state: link
+    force: true
+
+- name: Create symlink to borgmatic executables
+  file:
+    src: "{{ borgmatic_current_directory }}/bin/{{ item }}"
+    path: "{{ borgmatic_binary_directory }}/{{ item }}"
+    state: link
+    force: true
+  loop:
+    - borgmatic
+    - validate-borgmatic-config
+
+- name: Create borgmatic configuration directory
+  file:
+    path: "{{ borgmatic_configuration_directory }}"
+    mode: "{{ borgmatic_configuration_directory_mode }}"
+    state: directory
+
+- name: Merge borgmatic configuration
+  set_fact:
+    _borgmatic_merged_configuration: >-
+      {{
+        borgmatic_configuration | combine(
+          borgmatic_group_configuration,
+          borgmatic_host_configuration,
+          list_merge=borgmatic_configuration_list_merge,
+          recursive=borgmatic_configuration_recursive_merge
+        )
+      }}
+
+- name: Generate borgmatic configuration
+  set_fact:
+    _borgmatic_configuration: "{{ _borgmatic_merged_configuration | render_borgmatic_config }}"
+
+- name: Install borgmatic configuration file
+  template:
+    src: config.yml.j2
+    dest: "{{ borgmatic_configuration_directory }}/{{ borgmatic_configuration_file }}"
+    mode: "{{ borgmatic_configuration_file_mode }}"
+    validate: "{{ borgmatic_binary_directory }}/validate-borgmatic-config -c %s"
+
+- name: Generate and deploy SSH keys
+  include_tasks: ssh_keys.yml
+  loop: "{{ _borgmatic_merged_configuration.location.repositories | d([]) }}"
+  when: (item.type | d()) == "remote" and (item.inventory_host | d())
+
+- name: Initialize repositories
+  command:
+    argv:
+      - borgmatic
+      - rcreate
+      - --log-file
+      - /dev/stdout
+      - --log-file-verbosity
+      - 1
+      - "--encryption={{ _encryption }}"
+      - "--repository={{ _borgmatic_configuration.location.repositories[idx] }}"
+  register: _borgmatic_rcreate
+  vars:
+    _encryption: "{{ item.encryption | d(borgmatic_repository_encryption) }}"
+  loop: "{{ _borgmatic_merged_configuration.location.repositories | d([]) }}"
+  loop_control:
+    index_var: idx
+  when:
+    - item.initialize | d(borgmatic_repository_initialize)
+    # we can't initialize encrypted repositories without a passphrase
+    - _encryption == "none" or
+      (_borgmatic_configuration.storage.encryption_passphrase | d()) or
+      (_borgmatic_configuration.storage.encryption_passcommand | d())
+  # https://github.com/borgmatic-collective/borgmatic/blob/master/borgmatic/borg/rcreate.py#L43
+  changed_when: '"Repository already exists" not in _borgmatic_rcreate.stdout'
+
+- debug:
+    var: _borgmatic_rcreate
+
+- name: Install borgmatic SystemD service and timer
+  template:
+    src: systemd.service.j2
+    dest: "/etc/systemd/system/{{ item.name }}"
+    mode: "0644"
+  notify: reload systemd and restart borgmatic timer
+  loop:
+    - name: borgmatic.service
+      config: >-
+        {{
+          borgmatic_service_configuration | combine(
+            borgmatic_group_service_configuration,
+            borgmatic_host_service_configuration
+          )
+        }}
+    - name: borgmatic.timer
+      config: >-
+        {{
+          borgmatic_timer_configuration | combine(
+            borgmatic_group_timer_configuration,
+            borgmatic_host_timer_configuration
+          )
+        }}
+
+- name: Enable and start borgmatic timer
+  service:
+    name: borgmatic.timer
+    enabled: "{{ borgmatic_timer_enabled }}"
+    state: "{{ borgmatic_timer_state }}"
+  ignore_errors: "{{ ansible_check_mode }}"

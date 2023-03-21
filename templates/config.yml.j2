@@ -1,0 +1,4 @@
+# {{ ansible_managed }}
+
+# See https://torsion.org/borgmatic/docs/reference/configuration/
+{{ _borgmatic_configuration | to_nice_yaml(indent=2) }}

@@ -1,0 +1,8 @@
+---
+- name: Converge
+  hosts: client
+  gather_facts: false
+  tasks:
+    - name: "Include metabrainz.borgmatic"
+      ansible.builtin.include_role:
+        name: "metabrainz.borgmatic"

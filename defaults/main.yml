@@ -1,0 +1,98 @@
+---
+borgmatic_python_command: python3
+borgmatic_packages:
+  - python3-pip
+  - python3-venv
+
+borgmatic_version: 1.7.8
+borgmatic_base_directory: /opt/borgmatic
+borgmatic_directory: "{{ borgmatic_base_directory }}/{{ borgmatic_version }}"
+borgmatic_current_directory: "{{ borgmatic_base_directory }}/current"
+borgmatic_binary_directory: /usr/local/bin
+
+borgmatic_configuration_directory: /etc/borgmatic
+borgmatic_configuration_directory_mode: "0750"
+borgmatic_configuration_file: config.yaml
+borgmatic_configuration_file_mode: "0640"
+
+borgmatic_ssh_key_type: ed25519
+borgmatic_ssh_key_file: ".ssh/borgmatic@{{ inventory_hostname }}_{{ borgmatic_ssh_key_type }}"
+borgmatic_ssh_key_comment: "borgmatic@{{ inventory_hostname }}"
+#borgmatic_ssh_key_bits:
+#borgmatic_authorized_key_options: restrict
+borgmatic_repository_encryption: repokey-blake2
+borgmatic_repository_initialize: true
+
+# https://docs.ansible.com/ansible/latest/collections/ansible/builtin/combine_filter.html#keyword-parameters
+borgmatic_configuration_list_merge: replace
+borgmatic_configuration_recursive_merge: true
+
+borgmatic_configuration:
+  location:
+    source_directories: []
+    repositories: []
+  storage:
+    ssh_command: "ssh -i ~/{{ borgmatic_ssh_key_file }}"
+  retention:
+    keep_daily: 7
+  consistency: {}
+  hooks: {}
+borgmatic_group_configuration: {}
+borgmatic_host_configuration: {}
+
+# https://github.com/borgmatic-collective/borgmatic/blob/master/sample/systemd/borgmatic.service
+borgmatic_service_configuration:
+  Unit:
+    Description: borgmatic backup
+    Wants: network-online.target
+    After: network-online.target
+  Service:
+    Type: oneshot
+    LockPersonality: true
+    MemoryDenyWriteExecute: no
+    NoNewPrivileges: yes
+    PrivateDevices: yes
+    PrivateTmp: yes
+    ProtectClock: yes
+    ProtectControlGroups: yes
+    ProtectHostname: yes
+    ProtectKernelLogs: yes
+    ProtectKernelModules: yes
+    ProtectKernelTunables: yes
+    RestrictAddressFamilies: AF_UNIX AF_INET AF_INET6 AF_NETLINK
+    RestrictNamespaces: yes
+    RestrictRealtime: yes
+    RestrictSUIDSGID: yes
+    SystemCallArchitectures: native
+    SystemCallFilter: "@system-service"
+    SystemCallErrorNumber: EPERM
+    ProtectSystem: full
+    CapabilityBoundingSet: CAP_DAC_READ_SEARCH CAP_NET_RAW
+    Nice: 19
+    CPUSchedulingPolicy: batch
+    IOSchedulingClass: best-effort
+    IOSchedulingPriority: 7
+    IOWeight: 100
+    Restart: no
+    LogRateLimitIntervalSec: 0
+    ExecStartPre: sleep 1m
+    ExecStart: "{{ borgmatic_binary_directory }}/borgmatic --verbosity -1 --syslog-verbosity 1"
+borgmatic_group_service_configuration: {}
+borgmatic_host_service_configuration: {}
+
+# https://github.com/borgmatic-collective/borgmatic/blob/master/sample/systemd/borgmatic.timer
+borgmatic_timer_configuration:
+  Unit:
+    Description: Run borgmatic backup
+  Timer:
+    OnCalendar: daily
+    Persistent: true
+    RandomizedDelaySec: 3h
+  Install:
+    WantedBy: timers.target
+borgmatic_group_timer_configuration: {}
+borgmatic_host_timer_configuration: {}
+
+borgmatic_timer_enabled: true
+borgmatic_timer_state: started
+borgmatic_timer_restart_handler_state: restarted

@@ -1,0 +1,4 @@
+---
+roles:
+  - src: https://github.com/metabrainz/ansible-role-borg.git
+    name: metabrainz.borg

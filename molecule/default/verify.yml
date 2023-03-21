@@ -1,0 +1,43 @@
+---
+- name: Verify client
+  hosts: client
+  gather_facts: false
+  tasks:
+    - name: Ensure borgmatic is installed
+      stat:
+        path: /usr/local/bin/borgmatic
+      register: result
+      changed_when: false
+      failed_when:
+        - not (result.stat.isreg | d())
+        - not (result.stat.executable | d())
+
+    - name: Ensure borgmatic timer is running
+      systemd:
+        name: borgmatic.timer
+        state: started
+      check_mode: false
+      register: result
+      failed_when: result.changed
+
+    - name: Ensure borgmatic configuration is valid
+      command: /usr/local/bin/validate-borgmatic-config
+      changed_when: false
+
+    - name: Ensure borgmatic configuration is correct
+      copy:
+        src: files/config.yaml
+        dest: /etc/borgmatic/config.yaml
+        mode: "0640"
+      check_mode: true
+      register: result
+      failed_when: result.changed
+
+    - name: Ensure SystemD service file is correct
+      copy:
+        src: files/borgmatic.service
+        dest: /etc/systemd/system/borgmatic.service
+        mode: "0644"
+      check_mode: true
+      register: result
+      failed_when: result.changed
