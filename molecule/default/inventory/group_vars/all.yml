@@ -1,0 +1,7 @@
+borg_version: 1.2.3
+borg_release_type: linuxnew64
+
+borgmatic_configuration:
+  storage:
+    encryption_passphrase: sup3rs3cr37!
+    ssh_command: "ssh -i ~/{{ borgmatic_ssh_key_file }}"

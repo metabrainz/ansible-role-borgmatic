@@ -1,0 +1,8 @@
+---
+- name: Reload SystemD and restart borgmatic timer
+  listen: reload systemd and restart borgmatic timer
+  systemd:
+    daemon_reload: true
+    name: borgmatic.timer
+    state: "{{ borgmatic_timer_restart_handler_state }}"
+  ignore_errors: "{{ ansible_check_mode }}"

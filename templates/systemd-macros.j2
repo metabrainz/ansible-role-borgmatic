@@ -1,0 +1,20 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+
+{% macro systemd_section(config, section) -%}
+[{{ section }}]
+{% for option, value in config|dictsort %}
+{{ systemd_format_option(option, value) -}}
+{%   endfor %}
+{% endmacro -%}
+
+{% macro systemd_format_option(option, value) -%}
+{% if value is bool %}
+{{ option }}={{ value|lower }}
+{% elif value is list and value %}
+{%   for v in value %}
+{{ option }}={{ v }}
+{%   endfor %}
+{% else %}
+{{ option }}={{ value }}
+{% endif %}
+{% endmacro -%}

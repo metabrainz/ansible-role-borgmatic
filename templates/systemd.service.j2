@@ -1,0 +1,10 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+# {{ ansible_managed }}
+{% import "systemd-macros.j2" as macros with context %}
+
+{% for section, config in (item.config | dictsort) %}
+{{ macros.systemd_section(config, section) -}}
+{%   if not loop.last %}
+
+{%   endif %}
+{% endfor %}

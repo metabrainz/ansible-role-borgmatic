@@ -1,0 +1,34 @@
+---
+- name: Generate SSH keys
+  user:
+    name: root
+    generate_ssh_key: true
+    ssh_key_file: "{{ item.ssh_key_file | d(borgmatic_ssh_key_file) }}"
+    ssh_key_type: "{{ item.ssh_key_type | d(borgmatic_ssh_key_type) }}"
+    ssh_key_bits: "{{ item.ssh_key_bits | d(borgmatic_ssh_key_bits | d(omit)) }}"
+  register: _user
+
+- name: Deploy SSH keys
+  delegate_to: "{{ item.inventory_host }}"
+  ansible.posix.authorized_key:
+    user: "{{ item.user }}"
+    key: "{{ _user.ssh_public_key }}"
+    key_options: "{{ item.authorized_key_options | d(borgmatic_authorized_key_options | d(omit)) }}"
+    state: present
+
+- name: Retrieve SSH host keys
+  command:
+    argv:
+      - ssh-keyscan
+      - "{{ item.host | d(item.inventory_host) }}"
+  register: _ssh_keyscan
+  changed_when: false
+
+- name: Add SSH host keys to known_hosts
+  known_hosts:
+    name: "{{ key | split | first }}"
+    key: "{{ key }}"
+  loop: "{{ _ssh_keyscan.stdout_lines }}"
+  loop_control:
+    # avoid shadowing item variable
+    loop_var: key
