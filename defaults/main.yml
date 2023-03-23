@@ -49,20 +49,20 @@ borgmatic_service_configuration:
   Service:
     Type: oneshot
     LockPersonality: true
-    MemoryDenyWriteExecute: no
-    NoNewPrivileges: yes
-    PrivateDevices: yes
-    PrivateTmp: yes
-    ProtectClock: yes
-    ProtectControlGroups: yes
-    ProtectHostname: yes
-    ProtectKernelLogs: yes
-    ProtectKernelModules: yes
-    ProtectKernelTunables: yes
+    MemoryDenyWriteExecute: false
+    NoNewPrivileges: true
+    PrivateDevices: true
+    PrivateTmp: true
+    ProtectClock: true
+    ProtectControlGroups: true
+    ProtectHostname: true
+    ProtectKernelLogs: true
+    ProtectKernelModules: true
+    ProtectKernelTunables: true
     RestrictAddressFamilies: AF_UNIX AF_INET AF_INET6 AF_NETLINK
-    RestrictNamespaces: yes
-    RestrictRealtime: yes
-    RestrictSUIDSGID: yes
+    RestrictNamespaces: true
+    RestrictRealtime: true
+    RestrictSUIDSGID: true
     SystemCallArchitectures: native
     SystemCallFilter: "@system-service"
     SystemCallErrorNumber: EPERM
@@ -73,7 +73,7 @@ borgmatic_service_configuration:
     IOSchedulingClass: best-effort
     IOSchedulingPriority: 7
     IOWeight: 100
-    Restart: no
+    Restart: !!str no
     LogRateLimitIntervalSec: 0
     ExecStartPre: sleep 1m
     ExecStart: "{{ borgmatic_binary_directory }}/borgmatic --verbosity -1 --syslog-verbosity 1"
