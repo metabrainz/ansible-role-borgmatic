@@ -41,3 +41,12 @@
       check_mode: true
       register: result
       failed_when: result.changed
+
+    - name: Ensure SystemD timer file is correct
+      copy:
+        src: files/borgmatic.timer
+        dest: /etc/systemd/system/borgmatic.timer
+        mode: "0644"
+      check_mode: true
+      register: result
+      failed_when: result.changed

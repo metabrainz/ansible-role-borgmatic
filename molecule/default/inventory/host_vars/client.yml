@@ -1,9 +1,13 @@
 borgmatic_host_configuration:
   location:
     repositories:
-      - type: local
-        path: "/srv/backups/{{ inventory_hostname }}"
       - type: remote
         path: "./{{ inventory_hostname }}"
         user: borg
         inventory_host: server
+
+borgmatic_group_timer_configuration:
+  Timer:
+    RandomizedDelaySec: 6h
+
+borgmatic_configuration_list_merge: append
