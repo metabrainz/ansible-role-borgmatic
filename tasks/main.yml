@@ -101,7 +101,9 @@
         {{
           borgmatic_service_configuration | combine(
             borgmatic_group_service_configuration,
-            borgmatic_host_service_configuration
+            borgmatic_host_service_configuration,
+            list_merge=borgmatic_service_configuration_list_merge,
+            recursive=borgmatic_service_configuration_recursive_merge
           )
         }}
     - name: borgmatic.timer
@@ -109,7 +111,9 @@
         {{
           borgmatic_timer_configuration | combine(
             borgmatic_group_timer_configuration,
-            borgmatic_host_timer_configuration
+            borgmatic_host_timer_configuration,
+            list_merge=borgmatic_timer_configuration_list_merge,
+            recursive=borgmatic_timer_configuration_recursive_merge
           )
         }}
 

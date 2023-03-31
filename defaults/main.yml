@@ -23,10 +23,6 @@ borgmatic_ssh_key_comment: "borgmatic@{{ inventory_hostname }}"
 borgmatic_repository_encryption: repokey-blake2
 borgmatic_repository_initialize: true
 
-# https://docs.ansible.com/ansible/latest/collections/ansible/builtin/combine_filter.html#keyword-parameters
-borgmatic_configuration_list_merge: replace
-borgmatic_configuration_recursive_merge: true
-
 borgmatic_configuration:
   location:
     source_directories: []
@@ -92,6 +88,14 @@ borgmatic_timer_configuration:
     WantedBy: timers.target
 borgmatic_group_timer_configuration: {}
 borgmatic_host_timer_configuration: {}
+
+# https://docs.ansible.com/ansible/latest/collections/ansible/builtin/combine_filter.html#keyword-parameters
+borgmatic_configuration_list_merge: replace
+borgmatic_configuration_recursive_merge: true
+borgmatic_service_configuration_list_merge: replace
+borgmatic_service_configuration_recursive_merge: true
+borgmatic_timer_configuration_list_merge: replace
+borgmatic_timer_configuration_recursive_merge: true
 
 borgmatic_timer_enabled: true
 borgmatic_timer_state: started
