@@ -4,6 +4,14 @@
     name: "{{ borgmatic_packages }}"
     state: present
 
+- name: Install setuptools in borgmatic virtual environment
+  pip:
+    name: setuptools<71
+    state: present
+    virtualenv: "{{ borgmatic_directory }}"
+    virtualenv_command: "{{ borgmatic_python_command }} -m venv"
+  when: ansible_distribution_version is version('24.04', '>=')
+
 - name: Install borgmatic in a Python virtual environment
   pip:
     name: borgmatic
