@@ -4,6 +4,26 @@
     name: "{{ borgmatic_packages }}"
     state: present
 
+- name: Check Python version in existing virtualenv
+  stat:
+    path: "{{ borgmatic_directory }}/bin/python3"
+  register: _borgmatic_venv_python
+
+- name: Verify virtualenv is functional
+  command: "{{ borgmatic_directory }}/bin/pip3 --version"
+  register: _borgmatic_venv_pip_check
+  changed_when: false
+  failed_when: false
+  when: _borgmatic_venv_python.stat.exists
+
+- name: Remove virtualenv if broken or Python version changed
+  file:
+    path: "{{ borgmatic_directory }}"
+    state: absent
+  when:
+    - _borgmatic_venv_python.stat.exists
+    - _borgmatic_venv_pip_check.rc != 0
+
 - name: Install setuptools in borgmatic virtual environment
   pip:
     name: setuptools<71
