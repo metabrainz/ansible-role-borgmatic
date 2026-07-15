@@ -28,7 +28,7 @@
   known_hosts:
     name: "{{ key | split | first }}"
     key: "{{ key }}"
-  loop: "{{ _ssh_keyscan.stdout_lines }}"
+  loop: "{{ _ssh_keyscan.stdout_lines | reject('match', '^#') | list }}"
   loop_control:
     # avoid shadowing item variable
     loop_var: key
