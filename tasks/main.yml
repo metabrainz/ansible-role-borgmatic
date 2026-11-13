@@ -89,7 +89,11 @@
 - name: Generate and deploy SSH keys
   include_tasks: ssh_keys.yml
   loop: "{{ _borgmatic_merged_configuration.location.repositories | d([]) }}"
-  when: (item.type | d()) == "remote" and (item.inventory_host | d())
+  # inventory_host: the key is deployed there. manage_ssh_key: true without inventory_host (e.g. a Hetzner
+  # Storage Box): only generate the key and show it, it has to be authorized there by other means
+  when:
+    - (item.type | d()) == "remote"
+    - (item.inventory_host | d('') | length > 0) or (item.manage_ssh_key | d(false) | bool)
 
 - name: Initialize repositories
   command:

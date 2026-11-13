@@ -5,6 +5,14 @@ borgmatic_host_configuration:
         path: "./{{ inventory_hostname }}"
         user: borg
         inventory_host: server
+      # remote end not managed by Ansible: the key is generated but not deployed
+      - type: remote
+        host: server
+        port: 22
+        user: borg
+        path: "./{{ inventory_hostname }}-manual"
+        manage_ssh_key: true
+        initialize: false
 
 borgmatic_group_timer_configuration:
   Timer:
