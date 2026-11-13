@@ -117,6 +117,20 @@
   # https://github.com/borgmatic-collective/borgmatic/blob/master/borgmatic/borg/rcreate.py#L43
   changed_when: '"Repository already exists" not in _borgmatic_rcreate.stdout'
 
+- name: Create borgmatic extra configuration directory
+  file:
+    path: "{{ borgmatic_extra_configuration_directory }}"
+    mode: "{{ borgmatic_extra_configuration_directory_mode }}"
+    state: directory
+  when: borgmatic_extra_configurations | length > 0
+
+- name: Install extra borgmatic configurations
+  include_tasks: extra_configuration.yml
+  loop: "{{ borgmatic_extra_configurations | dict2items }}"
+  loop_control:
+    loop_var: _borgmatic_extra
+    label: "{{ _borgmatic_extra.key }}"
+
 - name: Install borgmatic SystemD service and timer
   template:
     src: systemd.service.j2
