@@ -89,7 +89,7 @@
       loop_control:
         loop_var: repository
       when:
-        - _borgmatic_extra_options.initialize | d(borgmatic_repository_initialize)
+        - _borgmatic_extra_options.initialize | d(borgmatic_repository_initialize) | bool
         # we can't initialize encrypted repositories without a passphrase
         - _encryption == "none" or
           (_borgmatic_extra_rendered.storage.encryption_passphrase | d('') | length > 0) or

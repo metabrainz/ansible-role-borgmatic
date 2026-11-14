@@ -113,11 +113,11 @@
   loop_control:
     index_var: idx
   when:
-    - item.initialize | d(borgmatic_repository_initialize)
+    - item.initialize | d(borgmatic_repository_initialize) | bool
     # we can't initialize encrypted repositories without a passphrase
     - _encryption == "none" or
-      (_borgmatic_configuration.storage.encryption_passphrase | d()) or
-      (_borgmatic_configuration.storage.encryption_passcommand | d())
+      (_borgmatic_configuration.storage.encryption_passphrase | d('') | length > 0) or
+      (_borgmatic_configuration.storage.encryption_passcommand | d('') | length > 0)
   # https://github.com/borgmatic-collective/borgmatic/blob/master/borgmatic/borg/rcreate.py#L43
   changed_when: '"Repository already exists" not in _borgmatic_rcreate.stdout'
 
