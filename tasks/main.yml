@@ -100,6 +100,8 @@
     argv:
       - borgmatic
       - rcreate
+      - --config
+      - "{{ borgmatic_configuration_directory }}/{{ borgmatic_configuration_file }}"
       - --log-file
       - /dev/stdout
       - --log-file-verbosity
