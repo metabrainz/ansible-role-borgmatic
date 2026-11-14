@@ -65,3 +65,5 @@ jobs:
           PY_COLORS: "1"
           ANSIBLE_FORCE_COLOR: "1"
           MOLECULE_DISTRO: ${{ matrix.distro }}
+          # the role is checked out as metabrainz.borgmatic in the workspace
+          ANSIBLE_ROLES_PATH: ${{ github.workspace }}
