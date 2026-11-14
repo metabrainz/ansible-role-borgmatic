@@ -16,11 +16,14 @@
       include_role:
         name: metabrainz.borg
 
-    - name: Create backup directory
+    - name: Create backup directories
       file:
-        path: /srv/backups
+        path: "{{ item }}"
         state: directory
         mode: "0750"
+      loop:
+        - /srv/backups
+        - /srv/backups-extra
 
     - name: Create the directory of the extra borgmatic configurations
       file:
