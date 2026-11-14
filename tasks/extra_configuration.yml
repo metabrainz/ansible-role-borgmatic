@@ -1,0 +1,97 @@
+---
+# One extra configuration, item is _borgmatic_extra (key: name, value: its definition)
+- name: "Set facts for extra borgmatic configuration {{ _borgmatic_extra.key }}"
+  set_fact:
+    _borgmatic_extra_name: "{{ _borgmatic_extra.key }}"
+    _borgmatic_extra_options: "{{ _borgmatic_extra.value }}"
+    _borgmatic_extra_path: "{{ borgmatic_extra_configuration_directory }}/{{ _borgmatic_extra.key }}.yaml"
+
+- name: "Remove extra borgmatic configuration {{ _borgmatic_extra_name }}"
+  file:
+    path: "{{ _borgmatic_extra_path }}"
+    state: absent
+  when: (_borgmatic_extra_options.state | d('present')) == 'absent'
+
+- name: "Install extra borgmatic configuration {{ _borgmatic_extra_name }}"
+  when: (_borgmatic_extra_options.state | d('present')) != 'absent'
+  block:
+    - name: "Render extra borgmatic configuration {{ _borgmatic_extra_name }}"
+      set_fact:
+        _borgmatic_extra_rendered: "{{ _borgmatic_extra_options.configuration | render_borgmatic_config }}"
+
+    - name: "Generate SSH key for extra borgmatic configuration {{ _borgmatic_extra_name }}"
+      user:
+        name: root
+        generate_ssh_key: true
+        ssh_key_file: "{{ _borgmatic_extra_options.ssh_key_file }}"
+        ssh_key_type: "{{ _borgmatic_extra_options.ssh_key_type | d(borgmatic_ssh_key_type) }}"
+        ssh_key_bits: "{{ _borgmatic_extra_options.ssh_key_bits | d(borgmatic_ssh_key_bits | d(omit)) }}"
+        ssh_key_comment: "{{ _borgmatic_extra_options.ssh_key_comment | d(omit) }}"
+      register: _borgmatic_extra_key
+      when: _borgmatic_extra_options.ssh_key_file is defined
+
+    - name: "Show the new SSH public key to authorize for {{ _borgmatic_extra_name }}"
+      debug:
+        msg: >-
+          Authorize this public key on the remote end of {{ _borgmatic_extra_name }}
+          ({{ _borgmatic_extra_options.ssh_key_file }}): {{ _borgmatic_extra_key.ssh_public_key | d('') }}
+      when:
+        - _borgmatic_extra_key is changed
+        - _borgmatic_extra_key.ssh_public_key | d('') | length > 0
+
+    - name: "Retrieve SSH host keys for {{ _borgmatic_extra_name }}"
+      command:
+        argv: "{{ ['ssh-keyscan', '-p', (item.port | d(22) | string), item.host] }}"
+      register: _borgmatic_extra_keyscan
+      changed_when: false
+      # read only, also needed to preview the known_hosts changes in check mode
+      check_mode: false
+      loop: "{{ _borgmatic_extra_options.ssh_known_hosts | d([]) }}"
+
+    - name: "Add SSH host keys to known_hosts for {{ _borgmatic_extra_name }}"
+      known_hosts:
+        name: "{{ key | split | first }}"
+        key: "{{ key }}"
+      loop: >-
+        {{
+          _borgmatic_extra_keyscan.results | d([])
+          | selectattr('stdout_lines', 'defined') | map(attribute='stdout_lines') | flatten
+          | reject('match', '^#') | list
+        }}
+      loop_control:
+        # avoid shadowing item variable
+        loop_var: key
+
+    - name: "Install extra borgmatic configuration file {{ _borgmatic_extra_path }}"
+      template:
+        src: extra_config.yml.j2
+        dest: "{{ _borgmatic_extra_path }}"
+        mode: "{{ borgmatic_extra_configuration_file_mode }}"
+        validate: "{{ borgmatic_binary_directory }}/validate-borgmatic-config -c %s"
+
+    - name: "Initialize repositories of extra borgmatic configuration {{ _borgmatic_extra_name }}"
+      command:
+        argv:
+          - borgmatic
+          - rcreate
+          - --config
+          - "{{ _borgmatic_extra_path }}"
+          - --log-file
+          - /dev/stdout
+          - --log-file-verbosity
+          - 1
+          - "--encryption={{ _encryption }}"
+          - "--repository={{ repository }}"
+      register: _borgmatic_extra_rcreate
+      vars:
+        _encryption: "{{ _borgmatic_extra_options.encryption | d(borgmatic_repository_encryption) }}"
+      loop: "{{ _borgmatic_extra_rendered.location.repositories | d([]) }}"
+      loop_control:
+        loop_var: repository
+      when:
+        - _borgmatic_extra_options.initialize | d(borgmatic_repository_initialize) | bool
+        # we can't initialize encrypted repositories without a passphrase
+        - _encryption == "none" or
+          (_borgmatic_extra_rendered.storage.encryption_passphrase | d('') | length > 0) or
+          (_borgmatic_extra_rendered.storage.encryption_passcommand | d('') | length > 0)
+      changed_when: '"Repository already exists" not in _borgmatic_extra_rcreate.stdout'

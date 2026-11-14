@@ -5,6 +5,7 @@ location:
   repositories:
   - /srv/backups/client
   - ssh://borg@server/./client
+  - ssh://borg@server:22/./client-manual
 storage:
   encryption_passphrase: sup3rs3cr37!
   ssh_command: ssh -i ~/.ssh/borgmatic@client_ed25519

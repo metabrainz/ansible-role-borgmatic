@@ -9,26 +9,44 @@
   register: _user
 
 - name: Deploy SSH keys
-  delegate_to: "{{ item.inventory_host }}"
+  # delegate_to is evaluated before "when", so it needs a value when there is no inventory_host
+  delegate_to: "{{ item.inventory_host | d('localhost') }}"
   ansible.posix.authorized_key:
     user: "{{ item.user }}"
     key: "{{ _user.ssh_public_key }}"
     key_options: "{{ item.authorized_key_options | d(borgmatic_authorized_key_options | d(omit)) }}"
     state: present
+  when: item.inventory_host | d('') | length > 0
+
+# No inventory_host: the remote end is not managed by Ansible (e.g. a Hetzner Storage Box), the key
+# has to be authorized there by other means
+- name: Show the new SSH public key to authorize
+  debug:
+    msg: >-
+      Authorize this public key on {{ item.host | d('the remote end') }} ({{ item.ssh_key_file | d(borgmatic_ssh_key_file) }}):
+      {{ _user.ssh_public_key | d('') }}
+  when:
+    - item.inventory_host | d('') | length == 0
+    - _user is changed
+    - _user.ssh_public_key | d('') | length > 0
 
 - name: Retrieve SSH host keys
   command:
     argv:
       - ssh-keyscan
+      - -p
+      - "{{ item.port | d(22) | string }}"
       - "{{ item.host | d(item.inventory_host) }}"
   register: _ssh_keyscan
   changed_when: false
+  # read only, also needed to preview the known_hosts changes in check mode
+  check_mode: false
 
 - name: Add SSH host keys to known_hosts
   known_hosts:
     name: "{{ key | split | first }}"
     key: "{{ key }}"
-  loop: "{{ _ssh_keyscan.stdout_lines | reject('match', '^#') | list }}"
+  loop: "{{ _ssh_keyscan.stdout_lines | d([]) | reject('match', '^#') | list }}"
   loop_control:
     # avoid shadowing item variable
     loop_var: key

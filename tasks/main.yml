@@ -30,7 +30,7 @@
     state: present
     virtualenv: "{{ borgmatic_directory }}"
     virtualenv_command: "{{ borgmatic_python_command }} -m venv"
-  when: ansible_distribution_version is version('24.04', '>=')
+  when: ansible_facts['distribution_version'] is version('24.04', '>=')
 
 - name: Install borgmatic in a Python virtual environment
   pip:
@@ -89,13 +89,19 @@
 - name: Generate and deploy SSH keys
   include_tasks: ssh_keys.yml
   loop: "{{ _borgmatic_merged_configuration.location.repositories | d([]) }}"
-  when: (item.type | d()) == "remote" and (item.inventory_host | d())
+  # inventory_host: the key is deployed there. manage_ssh_key: true without inventory_host (e.g. a Hetzner
+  # Storage Box): only generate the key and show it, it has to be authorized there by other means
+  when:
+    - (item.type | d()) == "remote"
+    - (item.inventory_host | d('') | length > 0) or (item.manage_ssh_key | d(false) | bool)
 
 - name: Initialize repositories
   command:
     argv:
       - borgmatic
       - rcreate
+      - --config
+      - "{{ borgmatic_configuration_directory }}/{{ borgmatic_configuration_file }}"
       - --log-file
       - /dev/stdout
       - --log-file-verbosity
@@ -109,13 +115,27 @@
   loop_control:
     index_var: idx
   when:
-    - item.initialize | d(borgmatic_repository_initialize)
+    - item.initialize | d(borgmatic_repository_initialize) | bool
     # we can't initialize encrypted repositories without a passphrase
     - _encryption == "none" or
-      (_borgmatic_configuration.storage.encryption_passphrase | d()) or
-      (_borgmatic_configuration.storage.encryption_passcommand | d())
+      (_borgmatic_configuration.storage.encryption_passphrase | d('') | length > 0) or
+      (_borgmatic_configuration.storage.encryption_passcommand | d('') | length > 0)
   # https://github.com/borgmatic-collective/borgmatic/blob/master/borgmatic/borg/rcreate.py#L43
   changed_when: '"Repository already exists" not in _borgmatic_rcreate.stdout'
+
+- name: Create borgmatic extra configuration directory
+  file:
+    path: "{{ borgmatic_extra_configuration_directory }}"
+    mode: "{{ borgmatic_extra_configuration_directory_mode }}"
+    state: directory
+  when: borgmatic_extra_configurations | length > 0
+
+- name: Install extra borgmatic configurations
+  include_tasks: extra_configuration.yml
+  loop: "{{ borgmatic_extra_configurations | dict2items }}"
+  loop_control:
+    loop_var: _borgmatic_extra
+    label: "{{ _borgmatic_extra.key }}"
 
 - name: Install borgmatic SystemD service and timer
   template:

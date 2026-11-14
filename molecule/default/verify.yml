@@ -50,3 +50,44 @@
       check_mode: true
       register: result
       failed_when: result.changed
+
+    - name: Ensure extra borgmatic configurations are valid
+      command: "/usr/local/bin/validate-borgmatic-config -c /etc/borgmatic.d/{{ item }}.yaml"
+      changed_when: false
+      loop:
+        - extra
+        - extra_remote
+
+    - name: Ensure extra borgmatic configurations are correct
+      copy:
+        src: "files/{{ item }}.yaml"
+        dest: "/etc/borgmatic.d/{{ item }}.yaml"
+        mode: "0640"
+      check_mode: true
+      register: result
+      failed_when: result.changed
+      loop:
+        - extra
+        - extra_remote
+
+    - name: Check the leftover extra configuration
+      stat:
+        path: /etc/borgmatic.d/extra_old.yaml
+      register: result
+      failed_when: result.stat.exists
+
+    - name: Check the SSH key of the extra configuration
+      stat:
+        path: /root/.ssh/extra_ed25519
+      register: result
+      failed_when: not (result.stat.exists and result.stat.mode == '0600')
+
+    - name: Check the SSH host key of the server was added with its port
+      command: ssh-keygen -F server
+      changed_when: false
+
+    - name: Ensure the extra local repository was initialized
+      stat:
+        path: /srv/backups-extra/client/config
+      register: result
+      failed_when: not result.stat.exists

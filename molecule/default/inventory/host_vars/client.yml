@@ -5,9 +5,57 @@ borgmatic_host_configuration:
         path: "./{{ inventory_hostname }}"
         user: borg
         inventory_host: server
+      # remote end not managed by Ansible: the key is generated but not deployed
+      - type: remote
+        host: server
+        port: 22
+        user: borg
+        path: "./{{ inventory_hostname }}-manual"
+        manage_ssh_key: true
+        initialize: false
 
 borgmatic_group_timer_configuration:
   Timer:
     RandomizedDelaySec: 6h
 
 borgmatic_configuration_list_merge: append
+
+borgmatic_extra_configurations:
+  # complete configuration of its own, local repository
+  extra:
+    configuration:
+      location:
+        source_directories:
+          - /srv/backups
+        repositories:
+          - type: local
+            path: "/srv/backups-extra/{{ inventory_hostname }}"
+      storage:
+        encryption_passphrase: sup3rs3cr37!
+        upload_rate_limit: 20000
+      retention:
+        keep_daily: 7
+  # remote repository on a non-default port, with its own SSH key. The key cannot be deployed by Ansible
+  # (no inventory_host), so the repository is not initialized here.
+  extra_remote:
+    configuration:
+      location:
+        source_directories:
+          - /srv/backups
+        repositories:
+          - type: remote
+            host: server
+            port: 22
+            user: borg
+            path: "./{{ inventory_hostname }}-extra"
+      storage:
+        encryption_passphrase: sup3rs3cr37!
+        ssh_command: "ssh -i ~/.ssh/extra_ed25519 -o IdentitiesOnly=yes"
+    ssh_key_file: .ssh/extra_ed25519
+    ssh_known_hosts:
+      - host: server
+        port: 22
+    initialize: false
+  # removed when present
+  extra_old:
+    state: absent

@@ -27,7 +27,7 @@ jobs:
       - name: Set up Python 3.
         uses: actions/setup-python@v6
         with:
-          python-version: "3.x"
+          python-version: "3.14"
 
       - name: Install test dependencies.
         run: pip3 install yamllint ansible ansible-lint
@@ -43,7 +43,7 @@ jobs:
     strategy:
       matrix:
         distro:
-          - ubuntu2004
+          - ubuntu2404
 
     steps:
       - name: Check out the codebase.
@@ -54,7 +54,7 @@ jobs:
       - name: Set up Python 3.
         uses: actions/setup-python@v6
         with:
-          python-version: "3.x"
+          python-version: "3.14"
 
       - name: Install test dependencies.
         run: pip3 install ansible molecule-plugins[docker] docker
@@ -65,3 +65,5 @@ jobs:
           PY_COLORS: "1"
           ANSIBLE_FORCE_COLOR: "1"
           MOLECULE_DISTRO: ${{ matrix.distro }}
+          # the role is checked out as metabrainz.borgmatic in the workspace
+          ANSIBLE_ROLES_PATH: ${{ github.workspace }}

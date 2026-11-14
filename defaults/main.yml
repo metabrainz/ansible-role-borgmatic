@@ -36,6 +36,47 @@ borgmatic_configuration:
 borgmatic_group_configuration: {}
 borgmatic_host_configuration: {}
 
+# Additional, independent borgmatic configuration files, written to
+# {{ borgmatic_extra_configuration_directory }}/<name>.yaml. borgmatic reads them by default, so the same service and
+# timer run them after the main configuration. Nothing is merged with borgmatic_configuration: each one is a complete
+# configuration, rendered like the main one (repositories of type "remote" accept "port"). Use it to send some data
+# to other repositories only (borgmatic backs up every source_directories entry to every repository of its file),
+# e.g. a Hetzner Storage Box, where the SSH key cannot be deployed by Ansible.
+#
+# borgmatic_extra_configurations:
+#   storagebox:
+#     # optional, default present; "absent" removes the file
+#     state: present
+#     configuration:
+#       location:
+#         source_directories: [/var/lib/docker/volumes/barman-backups/_data]
+#         repositories:
+#           - type: remote
+#             host: u123456-sub1.your-storagebox.de
+#             port: 23
+#             user: u123456-sub1
+#             path: ./borg
+#       storage:
+#         encryption_passphrase: "{{ lookup('password', 'credentials/borgmatic/' + inventory_hostname + '-storagebox') }}"
+#         ssh_command: "ssh -i ~/.ssh/storagebox_ed25519 -o IdentitiesOnly=yes -o IdentityAgent=none"
+#         upload_rate_limit: 20000
+#       retention:
+#         keep_daily: 7
+#     # optional: generate this key (relative to root's home), its public key is shown when created
+#     ssh_key_file: .ssh/storagebox_ed25519
+#     # optional: host keys to add to known_hosts (ssh-keyscan)
+#     ssh_known_hosts:
+#       - host: u123456-sub1.your-storagebox.de
+#         port: 23
+#     # optional: run "borgmatic rcreate" for its repositories. Needs the SSH key to be authorized on the remote end,
+#     # so set it to false for the first run, authorize the key, then remove it
+#     initialize: true
+#     encryption: repokey-blake2
+borgmatic_extra_configurations: {}
+borgmatic_extra_configuration_directory: /etc/borgmatic.d
+borgmatic_extra_configuration_directory_mode: "0750"
+borgmatic_extra_configuration_file_mode: "0640"
+
 # https://github.com/borgmatic-collective/borgmatic/blob/master/sample/systemd/borgmatic.service
 borgmatic_service_configuration:
   Unit:

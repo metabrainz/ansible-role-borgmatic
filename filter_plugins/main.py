@@ -22,11 +22,19 @@ def parse_borgmatic_repositories(repos):
             "user": "borg",
             "path": "./backups/{fqdn}"
         },
+        {
+            "type": "remote",
+            "host": "box.example.com",
+            "port": 23,
+            "user": "u12345-sub1",
+            "path": "./borg"
+        },
         "/var/lib/backups",
     ]
     Output:
     [
         "ssh://borg@storage.acme.com/./backups/{fqdn}",
+        "ssh://u12345-sub1@box.example.com:23/./borg",
         "/var/lib/backups",
     ]
     :param repos: list of repositories
@@ -54,11 +62,15 @@ def parse_borgmatic_repositories(repos):
         elif repo_type == "remote":
             repo_user = repo.get("user")
             repo_host = repo.get("host", repo.get("inventory_host"))
+            repo_port = repo.get("port")
 
             if repo_user is None:
                 raise AnsibleFilterTypeError("repository user is required")
             elif repo_host is None:
                 raise AnsibleFilterTypeError("repository host is required")
+
+            if repo_port is not None:
+                repo_host = "%s:%s" % (repo_host, repo_port)
 
             repositories.append("ssh://%s@%s/%s" % (repo_user, repo_host, repo_path))
         else:
