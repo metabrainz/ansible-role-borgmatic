@@ -17,6 +17,9 @@
     key_options: "{{ item.authorized_key_options | d(borgmatic_authorized_key_options | d(omit)) }}"
     state: present
   when: item.inventory_host | d('') | length > 0
+  # a temporarily unreachable repository host (buddy down) must not stop the rest of the role: the key is
+  # already authorized there, and the run is repeated by the next playbook run
+  ignore_unreachable: true
 
 # No inventory_host: the remote end is not managed by Ansible (e.g. a Hetzner Storage Box), the key
 # has to be authorized there by other means
@@ -41,6 +44,8 @@
   changed_when: false
   # read only, also needed to preview the known_hosts changes in check mode
   check_mode: false
+  # same reason as the key deployment: an unreachable repository host keeps the host keys already known
+  ignore_errors: true
 
 - name: Add SSH host keys to known_hosts
   known_hosts:
